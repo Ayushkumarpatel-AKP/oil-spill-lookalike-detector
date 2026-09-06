@@ -1,0 +1,7 @@
+{
+  "threshold": 0.4,
+  "target_recall": 0.9,
+  "achieved_recall": 0.9044827575726349,
+  "achieved_precision": 0.7605341759171105,
+  "f1": 0.8262859492004992
+}

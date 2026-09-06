@@ -1,0 +1,34 @@
+Device: cuda
+Train samples: 6455  Test samples: 1615
+Epoch 1/20 (141.0s) train_loss=0.7734 train_iou=0.5510 val_loss=0.7279 val_iou=0.5689
+  -> saved best_model.pth (val_iou=0.5689)
+Epoch 2/20 (140.5s) train_loss=0.6229 train_iou=0.5955 val_loss=0.6619 val_iou=0.5992
+  -> saved best_model.pth (val_iou=0.5992)
+Epoch 3/20 (140.8s) train_loss=0.5997 train_iou=0.6047 val_loss=0.6709 val_iou=0.5983
+Epoch 4/20 (142.3s) train_loss=0.5849 train_iou=0.6141 val_loss=0.6556 val_iou=0.5971
+Epoch 5/20 (140.3s) train_loss=0.5795 train_iou=0.6153 val_loss=0.6072 val_iou=0.6253
+  -> saved best_model.pth (val_iou=0.6253)
+Epoch 6/20 (138.9s) train_loss=0.5669 train_iou=0.6220 val_loss=0.5951 val_iou=0.6182
+Epoch 7/20 (139.5s) train_loss=0.5478 train_iou=0.6310 val_loss=0.5853 val_iou=0.6260
+  -> saved best_model.pth (val_iou=0.6260)
+Epoch 8/20 (140.0s) train_loss=0.5466 train_iou=0.6316 val_loss=0.5851 val_iou=0.6341
+  -> saved best_model.pth (val_iou=0.6341)
+Epoch 9/20 (140.0s) train_loss=0.5497 train_iou=0.6320 val_loss=0.5978 val_iou=0.6113
+Epoch 10/20 (139.9s) train_loss=0.5400 train_iou=0.6349 val_loss=0.6025 val_iou=0.6178
+Epoch 11/20 (140.6s) train_loss=0.5377 train_iou=0.6379 val_loss=0.5653 val_iou=0.6399
+  -> saved best_model.pth (val_iou=0.6399)
+Epoch 12/20 (140.4s) train_loss=0.5294 train_iou=0.6436 val_loss=0.5693 val_iou=0.6390
+Epoch 13/20 (141.0s) train_loss=0.5268 train_iou=0.6426 val_loss=0.5728 val_iou=0.6339
+Epoch 14/20 (140.5s) train_loss=0.5221 train_iou=0.6447 val_loss=0.5515 val_iou=0.6456
+  -> saved best_model.pth (val_iou=0.6456)
+Epoch 15/20 (140.1s) train_loss=0.5215 train_iou=0.6447 val_loss=0.5682 val_iou=0.6335
+Epoch 16/20 (140.4s) train_loss=0.5188 train_iou=0.6452 val_loss=0.5681 val_iou=0.6460
+  -> saved best_model.pth (val_iou=0.6460)
+Epoch 17/20 (140.3s) train_loss=0.5158 train_iou=0.6480 val_loss=0.5511 val_iou=0.6403
+Epoch 18/20 (140.1s) train_loss=0.5181 train_iou=0.6475 val_loss=0.5718 val_iou=0.6472
+  -> saved best_model.pth (val_iou=0.6472)
+Epoch 19/20 (140.1s) train_loss=0.5168 train_iou=0.6475 val_loss=0.5462 val_iou=0.6494
+  -> saved best_model.pth (val_iou=0.6494)
+Epoch 20/20 (140.4s) train_loss=0.5057 train_iou=0.6535 val_loss=0.5817 val_iou=0.6354
+Training complete. Best val IoU: 0.6494
+Tuned threshold=0.40 (recall=0.9045, precision=0.7605, f1=0.8263) -> saved threshold.json

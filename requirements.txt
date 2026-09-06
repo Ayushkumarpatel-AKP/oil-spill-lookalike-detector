@@ -1,0 +1,7 @@
+torch
+numpy
+pillow
+flask
+tifffile
+pyproj
+opencv-python-headless

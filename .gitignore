@@ -1,0 +1,9 @@
+dataset/
+*.SAFE/
+__pycache__/
+*.pyc
+oil-spill-detection-main/
+.claude/
+app_run.log
+app_log.txt
+sample_test.tif

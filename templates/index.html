@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oil Spill Detection</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --panel: #11192b;
+    --panel-2: #16203a;
+    --border: #223052;
+    --text: #e8edf6;
+    --muted: #8b98ac;
+    --accent: #3d8bfd;
+    --accent-2: #6ea8fe;
+    --danger: #ff5c5c;
+    --warn: #ffb454;
+    --ok: #3ddc97;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: radial-gradient(circle at top, #101a30 0%, var(--bg) 55%);
+    color: var(--text);
+    margin: 0;
+    min-height: 100vh;
+    padding: 48px 20px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header { text-align: center; margin-bottom: 28px; max-width: 620px; }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  h1 .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 10px var(--ok);
+  }
+  p.sub { color: var(--muted); margin: 0; font-size: 14.5px; line-height: 1.5; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%;
+    max-width: 760px;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.5);
+  }
+
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--accent);
+    background: rgba(61, 139, 253, 0.06);
+  }
+  .dropzone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .dropzone-icon { font-size: 32px; margin-bottom: 8px; }
+  .dropzone-text { color: var(--text); font-size: 15px; font-weight: 500; }
+  .dropzone-hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  .preview-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: none;
+  }
+  .preview-row img {
+    width: 48px; height: 48px; object-fit: cover; border-radius: 6px;
+  }
+  .preview-row .fname { font-size: 13.5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preview-row .clear-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px 8px;
+  }
+  .preview-row .clear-btn:hover { color: var(--danger); }
+
+  .actions { display: flex; gap: 10px; margin-top: 18px; align-items: center; }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    border: none;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .1s, opacity .15s;
+  }
+  button.primary:hover:not(:disabled) { transform: translateY(-1px); }
+  button.primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #status { color: var(--muted); font-size: 13.5px; }
+  #status.error { color: var(--danger); }
+
+  .summary {
+    margin-top: 24px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 16px 18px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .summary .label { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+  .summary .value { font-size: 26px; font-weight: 700; }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: .02em;
+  }
+  .badge.low { background: rgba(61,220,151,0.15); color: var(--ok); }
+  .badge.med { background: rgba(255,180,84,0.15); color: var(--warn); }
+  .badge.high { background: rgba(255,92,92,0.15); color: var(--danger); }
+  .summary .threshold-note { color: var(--muted); font-size: 12px; max-width: 260px; }
+
+  .opacity-control { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 13px; color: var(--muted); }
+  .opacity-control input[type=range] { accent-color: var(--accent); flex: 1; max-width: 200px; }
+
+  .blob-section { margin-top: 20px; display: none; }
+  .blob-section .label { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .blob-disclaimer {
+    font-size: 12px; color: var(--muted); margin-bottom: 10px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+  }
+  .blob-list { display: flex; flex-direction: column; gap: 8px; }
+  .blob-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 13px;
+  }
+  .blob-item .badge { flex-shrink: 0; }
+  .badge.oil { background: rgba(61,220,151,0.15); color: var(--ok); }
+  .badge.uncertain { background: rgba(255,180,84,0.15); color: var(--warn); }
+  .badge.lookalike { background: rgba(255,92,92,0.15); color: var(--danger); }
+  .blob-item .blob-meta { color: var(--muted); }
+  .blob-item .blob-reasons { color: var(--text); flex: 1; }
+  .overlay-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .overlay-legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+
+  .results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+    display: none;
+  }
+  .results figure { margin: 0; }
+  .results figcaption {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .results img {
+    width: 100%;
+    display: block;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #000;
+    cursor: zoom-in;
+    transition: transform .15s;
+  }
+  .results img:hover { transform: scale(1.02); }
+
+  footer { margin-top: 28px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  .lightbox {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    align-items: center; justify-content: center;
+    z-index: 50;
+    cursor: zoom-out;
+    padding: 24px;
+  }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+
+  .map-section { margin-top: 20px; display: none; }
+  .map-section .label { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  #map { height: 260px; border-radius: 10px; border: 1px solid var(--border); }
+  .coords { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .coords b { color: var(--text); }
+  .no-geo-note {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1><span class="dot"></span>Oil Spill Detection</h1>
+    <p class="sub">Upload a SAR image (Sentinel-1 / PALSAR) and the model segments the oil spill region pixel-by-pixel, tuned for high recall so spills are less likely to be missed.</p>
+  </header>
+
+  <div class="card">
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept="image/*,.tif,.tiff">
+      <div class="dropzone-icon">📡</div>
+      <div class="dropzone-text">Click to browse or drag & drop a SAR image</div>
+      <div class="dropzone-hint">PNG / JPG, or GeoTIFF (.tif) for location detection</div>
+    </div>
+
+    <div class="preview-row" id="previewRow">
+      <img id="previewThumb">
+      <span class="fname" id="fname"></span>
+      <button class="clear-btn" id="clearBtn" title="Remove">✕</button>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="predictBtn" disabled>Detect Spill</button>
+      <span id="status"></span>
+    </div>
+
+    <div class="summary" id="summary">
+      <div>
+        <div class="label">Estimated Spill Coverage</div>
+        <div class="value" id="spillPercent">–</div>
+      </div>
+      <div>
+        <span class="badge" id="severityBadge">–</span>
+      </div>
+      <div class="threshold-note" id="thresholdNote"></div>
+    </div>
+
+    <div class="opacity-control" id="opacityControl" style="display:none;">
+      <span>Overlay opacity</span>
+      <input type="range" id="opacitySlider" min="20" max="100" value="70">
+    </div>
+
+    <div class="results" id="results">
+      <figure>
+        <figcaption>Original</figcaption>
+        <img id="origImg" data-full="">
+      </figure>
+      <figure>
+        <figcaption>Predicted Mask</figcaption>
+        <img id="maskImg" data-full="">
+      </figure>
+      <figure>
+        <figcaption>Overlay</figcaption>
+        <img id="overlayImg" data-full="">
+      </figure>
+    </div>
+
+    <div class="overlay-legend" id="overlayLegend" style="display:none;">
+      <span><span class="swatch" style="background:#3ddc97;"></span>Likely oil</span>
+      <span><span class="swatch" style="background:#ffb454;"></span>Uncertain</span>
+      <span><span class="swatch" style="background:#ff5c5c;"></span>Possible look-alike</span>
+    </div>
+
+    <div class="blob-section" id="blobSection">
+      <div class="label">Detected Regions</div>
+      <div class="blob-disclaimer">
+        Scored by a classifier trained on real labeled Oil vs. Look-alike SAR scenes
+        (93% accuracy on held-out test images) using blob shape/texture features
+        (compactness, elongation, boundary sharpness, interior homogeneity).
+      </div>
+      <div class="blob-list" id="blobList"></div>
+    </div>
+
+    <div class="map-section" id="mapSection">
+      <div class="label">Detected Location</div>
+      <div id="map"></div>
+      <div class="coords" id="coords"></div>
+    </div>
+
+    <div class="no-geo-note" id="noGeoNote">
+      No location data — regular PNG/JPG images don't carry geo-coordinates. Upload a GeoTIFF (.tif) to see the spill's real-world location on a map.
+    </div>
+  </div>
+
+  <footer>Model: U-Net (256×256, trained on combined PALSAR + Sentinel-1 data)</footer>
+
+  <div class="lightbox" id="lightbox"><img id="lightboxImg"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const previewRow = document.getElementById('previewRow');
+const previewThumb = document.getElementById('previewThumb');
+const fnameEl = document.getElementById('fname');
+const clearBtn = document.getElementById('clearBtn');
+const predictBtn = document.getElementById('predictBtn');
+const statusEl = document.getElementById('status');
+const results = document.getElementById('results');
+const summary = document.getElementById('summary');
+const opacityControl = document.getElementById('opacityControl');
+const opacitySlider = document.getElementById('opacitySlider');
+const overlayImg = document.getElementById('overlayImg');
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const mapSection = document.getElementById('mapSection');
+const noGeoNote = document.getElementById('noGeoNote');
+const coordsEl = document.getElementById('coords');
+const overlayLegend = document.getElementById('overlayLegend');
+const blobSection = document.getElementById('blobSection');
+const blobList = document.getElementById('blobList');
+
+const BLOB_LABELS = {
+  likely_oil: { cls: 'oil', text: 'LIKELY OIL' },
+  uncertain: { cls: 'uncertain', text: 'UNCERTAIN' },
+  possible_look_alike: { cls: 'lookalike', text: 'POSSIBLE LOOK-ALIKE' },
+};
+
+function renderBlobs(blobs) {
+  blobList.innerHTML = '';
+  if (!blobs || blobs.length === 0) {
+    blobSection.style.display = 'none';
+    overlayLegend.style.display = 'none';
+    return;
+  }
+  blobs.forEach(blob => {
+    const info = BLOB_LABELS[blob.label] || { cls: 'uncertain', text: blob.label };
+    const item = document.createElement('div');
+    item.className = 'blob-item';
+    item.innerHTML =
+      '<span class="badge ' + info.cls + '">' + info.text + '</span>' +
+      '<span class="blob-meta">' + blob.area_percent.toFixed(1) + '% of scene &middot; risk ' + blob.look_alike_risk.toFixed(2) + '</span>' +
+      '<span class="blob-reasons">' + blob.reasons.join(', ') + '</span>';
+    blobList.appendChild(item);
+  });
+  blobSection.style.display = 'block';
+  overlayLegend.style.display = 'flex';
+}
+
+let currentFile = null;
+let leafletMap = null;
+
+function isTiff(file) {
+  return /\.tiff?$/i.test(file.name);
+}
+
+function setFile(file) {
+  if (!file || !(file.type.startsWith('image/') || isTiff(file))) return;
+  currentFile = file;
+  if (isTiff(file)) {
+    previewThumb.removeAttribute('src');
+    previewThumb.alt = '🛰️';
+  } else {
+    previewThumb.src = URL.createObjectURL(file);
+    previewThumb.alt = '';
+  }
+  fnameEl.textContent = file.name;
+  previewRow.style.display = 'flex';
+  predictBtn.disabled = false;
+  statusEl.textContent = '';
+  statusEl.classList.remove('error');
+  results.style.display = 'none';
+  summary.style.display = 'none';
+  opacityControl.style.display = 'none';
+  mapSection.style.display = 'none';
+  noGeoNote.style.display = 'none';
+  blobSection.style.display = 'none';
+  overlayLegend.style.display = 'none';
+}
+
+fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+
+['dragover', 'dragenter'].forEach(evt =>
+  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragover'); })
+);
+['dragleave', 'drop'].forEach(evt =>
+  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragover'); })
+);
+dropzone.addEventListener('drop', e => {
+  const file = e.dataTransfer.files[0];
+  if (file) setFile(file);
+});
+
+clearBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  currentFile = null;
+  fileInput.value = '';
+  previewRow.style.display = 'none';
+  predictBtn.disabled = true;
+  results.style.display = 'none';
+  summary.style.display = 'none';
+  opacityControl.style.display = 'none';
+  mapSection.style.display = 'none';
+  noGeoNote.style.display = 'none';
+  blobSection.style.display = 'none';
+  overlayLegend.style.display = 'none';
+});
+
+function severityInfo(percent) {
+  if (percent < 5) return { cls: 'low', label: 'LOW' };
+  if (percent < 25) return { cls: 'med', label: 'MODERATE' };
+  return { cls: 'high', label: 'HIGH' };
+}
+
+predictBtn.addEventListener('click', async () => {
+  if (!currentFile) return;
+
+  predictBtn.disabled = true;
+  statusEl.classList.remove('error');
+  statusEl.innerHTML = '<span class="spinner"></span>Running model...';
+  results.style.display = 'none';
+  summary.style.display = 'none';
+  blobSection.style.display = 'none';
+  overlayLegend.style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('image', currentFile);
+
+  try {
+    const res = await fetch('/predict', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.error) {
+      statusEl.textContent = 'Error: ' + data.error;
+      statusEl.classList.add('error');
+      predictBtn.disabled = false;
+      return;
+    }
+
+    const origUrl = 'data:image/png;base64,' + data.original;
+    document.getElementById('origImg').src = origUrl;
+    document.getElementById('origImg').dataset.full = origUrl;
+
+    const maskUrl = 'data:image/png;base64,' + data.mask;
+    document.getElementById('maskImg').src = maskUrl;
+    document.getElementById('maskImg').dataset.full = maskUrl;
+
+    const overlayUrl = 'data:image/png;base64,' + data.overlay;
+    overlayImg.src = overlayUrl;
+    overlayImg.dataset.full = overlayUrl;
+
+    document.getElementById('spillPercent').textContent = data.spill_percent + '%';
+
+    const sev = severityInfo(data.spill_percent);
+    const badge = document.getElementById('severityBadge');
+    badge.textContent = sev.label;
+    badge.className = 'badge ' + sev.cls;
+
+    document.getElementById('thresholdNote').textContent =
+      'Decision threshold ' + data.threshold.toFixed(2) + ' (tuned for high recall)';
+
+    renderBlobs(data.blobs);
+
+    results.style.display = 'grid';
+    summary.style.display = 'flex';
+    opacityControl.style.display = 'flex';
+    opacitySlider.value = 70;
+    overlayImg.style.opacity = 0.7;
+    statusEl.textContent = '';
+
+    if (data.location) {
+      showMap(data.location, data.footprint);
+    } else {
+      // Either a regular PNG/JPG (no geo-tags possible), or a GeoTIFF
+      // whose geo-tags couldn't be read.
+      noGeoNote.style.display = 'block';
+    }
+  } catch (err) {
+    statusEl.textContent = 'Request failed: ' + err;
+    statusEl.classList.add('error');
+  } finally {
+    predictBtn.disabled = false;
+  }
+});
+
+opacitySlider.addEventListener('input', () => {
+  overlayImg.style.opacity = opacitySlider.value / 100;
+});
+
+function showMap(location, footprint) {
+  mapSection.style.display = 'block';
+  noGeoNote.style.display = 'none';
+
+  if (!leafletMap) {
+    leafletMap = L.map('map');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+    }).addTo(leafletMap);
+  } else {
+    leafletMap.eachLayer(layer => {
+      if (layer instanceof L.Marker || layer instanceof L.Polygon) {
+        leafletMap.removeLayer(layer);
+      }
+    });
+  }
+
+  const latlng = [location.lat, location.lon];
+  L.marker(latlng).addTo(leafletMap).bindPopup('Detected spill centroid');
+
+  if (footprint && footprint.length === 4) {
+    const poly = L.polygon(footprint, { color: '#3d8bfd', weight: 2, fillOpacity: 0.05 }).addTo(leafletMap);
+    leafletMap.fitBounds(poly.getBounds(), { padding: [20, 20] });
+  } else {
+    leafletMap.setView(latlng, 13);
+  }
+
+  // Leaflet needs a size recalculation once its container becomes visible.
+  setTimeout(() => leafletMap.invalidateSize(), 100);
+
+  coordsEl.innerHTML = 'Spill centroid: <b>' + location.lat.toFixed(5) + ', ' + location.lon.toFixed(5) + '</b>';
+}
+
+results.addEventListener('click', (e) => {
+  if (e.target.tagName === 'IMG' && e.target.dataset.full) {
+    lightboxImg.src = e.target.dataset.full;
+    lightbox.style.display = 'flex';
+  }
+});
+lightbox.addEventListener('click', () => { lightbox.style.display = 'none'; });
+</script>
+</body>
+</html>
